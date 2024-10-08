@@ -1,5 +1,5 @@
-module github.com/kmmndr/motion_speed
+module motionspeed
 
-go 1.23.1
+go 1.23.2
 
 require gocv.io/x/gocv v0.38.0
