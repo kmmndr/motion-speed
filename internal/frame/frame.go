@@ -1,7 +1,7 @@
 package frame
 
 import (
-	"log"
+	"errors"
 
 	"gocv.io/x/gocv"
 )
@@ -11,18 +11,22 @@ type Frame struct {
 	mat    gocv.Mat
 }
 
-func NewFrame(number int, mat gocv.Mat) *Frame {
+func NewFrame(number int, mat gocv.Mat) (*Frame, error) {
 	if mat.Empty() {
-		log.Fatal("Frame is empty")
+		return nil, errors.New("Frame is empty")
 	}
-	return &Frame{number: number, mat: mat}
+	return &Frame{number: number, mat: mat}, nil
 }
 
 func (f *Frame) Mat() *gocv.Mat {
 	return &f.mat
 }
 
-func (f *Frame) Gray() *Frame {
+func (f *Frame) FrameIndex() int {
+	return f.number
+}
+
+func (f *Frame) Gray() (*Frame, error) {
 	gray := gocv.NewMat()
 	gocv.CvtColor(f.mat, &gray, gocv.ColorBGRToGray)
 	return NewFrame(f.number, gray)

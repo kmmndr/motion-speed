@@ -43,9 +43,14 @@ func (md *MotionDetector) Detect(video *gocv.VideoCapture) {
 			break
 		}
 
-		frame := frame.NewFrame(frameIndex, currentFrame)
-		grayFrame := frame.Gray()
-		frame.Close()
+		frame, err := frame.NewFrame(frameIndex, currentFrame)
+		if err != nil {
+			log.Printf("Unable to create Frame : %v", err)
+		}
+		grayFrame, err := frame.Gray()
+		if err != nil {
+			log.Printf("Unable to create Frame : %v", err)
+		}
 		defer grayFrame.Close()
 
 		frameIndex++
@@ -75,6 +80,8 @@ func (md *MotionDetector) Detect(video *gocv.VideoCapture) {
 				log.Fatal("Unable to write image")
 			}
 		}
+
+		frame.Close()
 	}
 
 	if movementFrameCount > 0 {
