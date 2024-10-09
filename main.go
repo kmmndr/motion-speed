@@ -6,8 +6,11 @@ import (
 	"log"
 	"os"
 
+	"motionspeed/internal/frame"
 	"motionspeed/internal/motion"
 	"motionspeed/internal/video"
+
+	"gocv.io/x/gocv"
 )
 
 func main() {
@@ -25,12 +28,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	video, err := video.OpenVideo(videoPath)
+	stream, err := video.NewStream(videoPath)
 	if err != nil {
 		log.Fatalf("Error: unable to open video file: %v\n", err)
 	}
-	defer video.Close()
+	defer stream.Close()
 
 	motionDetector := motion.NewMotionDetector(movementThreshold, cameraViewLength)
-	motionDetector.Detect(video)
+	motionDetector.Detect(stream.Video,
+		func(startFrame *frame.Frame) {
+			startTime := stream.TimeAtFrame(startFrame)
+
+			fmt.Printf("Motion started at: %.2f seconds.\n", startTime)
+			if !gocv.IMWrite("motion-start.jpg", *startFrame.Mat()) {
+				log.Fatal("Unable to write image")
+			}
+		},
+		func(endFrame *frame.Frame) {
+			endTime := stream.TimeAtFrame(endFrame)
+			fmt.Printf("Motion ended at: %.2f seconds.\n", endTime)
+			if !gocv.IMWrite("motion-end.jpg", *endFrame.Mat()) {
+				log.Fatal("Unable to write image")
+			}
+		})
 }
