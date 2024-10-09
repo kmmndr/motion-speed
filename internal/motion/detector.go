@@ -26,7 +26,7 @@ func (md *MotionDetector) Speed(duration float64) float64 {
 	return (md.cameraViewLength / duration) * 3.6
 }
 
-func (md *MotionDetector) Detect(video *gocv.VideoCapture) {
+func (md *MotionDetector) Detect(video *gocv.VideoCapture, onMotionStart func(*frame.Frame), onMotionEnd func(*frame.Frame)) {
 	fps := video.Get(gocv.VideoCaptureFPS)
 	if fps <= 0 {
 		log.Fatal("Error: unable to get video frame rate")
@@ -64,21 +64,12 @@ func (md *MotionDetector) Detect(video *gocv.VideoCapture) {
 		if nonZeroPixels > md.threshold {
 			if !isMovementDetected {
 				isMovementDetected = true
-
-				movementTime := float64(frameIndex) / fps
-				fmt.Printf("Motion starting at: %.2f seconds.\n", movementTime)
-
-				if !gocv.IMWrite("motion-start.jpg", *grayFrame.Mat()) {
-					log.Fatal("Unable to write image")
-				}
+				onMotionStart(frame)
 			}
 			movementFrameCount++
 		} else if isMovementDetected {
 			isMovementDetected = false
-
-			if !gocv.IMWrite("motion-end.jpg", *grayFrame.Mat()) {
-				log.Fatal("Unable to write image")
-			}
+			onMotionEnd(frame)
 		}
 
 		frame.Close()
