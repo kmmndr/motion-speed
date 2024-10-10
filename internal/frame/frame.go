@@ -32,6 +32,10 @@ func (f *Frame) Gray() (*Frame, error) {
 	return NewFrame(f.number, gray)
 }
 
+func (f *Frame) Clone() (*Frame, error) {
+	return NewFrame(f.number, f.mat.Clone())
+}
+
 func (f *Frame) Close() {
 	f.mat.Close()
 }

@@ -1,7 +1,7 @@
 package motion
 
 import (
-	"fmt"
+	"errors"
 	"log"
 	"motionspeed/internal/frame"
 	"motionspeed/internal/video"
@@ -80,23 +80,30 @@ func (md *MotionDetector) detect(stream *video.Stream, onMotionStart func(*frame
 		if nonZeroPixels > md.threshold {
 			if !isMovementDetected {
 				isMovementDetected = true
-				onMotionStart(frame)
+				startFrame, _ = currentFrame.Clone()
+
+				onMotionStart(startFrame)
 			}
 			movementFrameCount++
 		} else if isMovementDetected {
 			isMovementDetected = false
-			onMotionEnd(frame)
+			endFrame, _ = currentFrame.Clone()
+
+			onMotionEnd(endFrame)
+
+			if startFrame == nil {
+				log.Fatalf("err : %v", err)
+			}
+			motion, err := NewMotion(startFrame, endFrame)
+			if err != nil {
+				log.Fatalf("err : %v", err)
+			}
+			afterMotion(motion)
+
+			startFrame.Close()
+			endFrame.Close()
 		}
 
-		frame.Close()
-	}
-
-	if movementFrameCount > 0 {
-		movementTime := float64(movementFrameCount) / fps
-		fmt.Printf("Motion duration: %.2f seconds.\n", movementTime)
-		speed := (md.cameraViewLength / movementTime) * 3.6
-		fmt.Printf("Speed: %.2f km/h.\n", speed)
-	} else {
-		fmt.Println("Motion not detected")
+		currentFrame.Close()
 	}
 }

@@ -34,11 +34,16 @@ func main() {
 	}
 	defer stream.Close()
 
+	fps := stream.Fps()
+	if fps <= 0 {
+		log.Fatal("Error: unable to get video frame rate")
+	}
+	fmt.Printf("Video frame rate: %.2f fps\n", fps)
+
 	motionDetector := motion.NewMotionDetector(movementThreshold, cameraViewLength)
-	motionDetector.Detect(stream.Video,
+	motionDetector.Detect(stream,
 		func(startFrame *frame.Frame) {
 			startTime := stream.TimeAtFrame(startFrame)
-
 			fmt.Printf("Motion started at: %.2f seconds.\n", startTime)
 			if !gocv.IMWrite("motion-start.jpg", *startFrame.Mat()) {
 				log.Fatal("Unable to write image")
@@ -50,5 +55,11 @@ func main() {
 			if !gocv.IMWrite("motion-end.jpg", *endFrame.Mat()) {
 				log.Fatal("Unable to write image")
 			}
+		},
+		func(detectedMotion *motion.Motion) {
+			movementTime := float64(detectedMotion.FramesCount()) / fps
+			fmt.Printf("Motion duration: %.2f seconds.\n", movementTime)
+			speed := (cameraViewLength / movementTime) * 3.6
+			fmt.Printf("Speed: %.2f km/h.\n", speed)
 		})
 }
