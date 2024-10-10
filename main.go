@@ -15,24 +15,37 @@ import (
 
 func main() {
 	var videoPath string
+	var videoUrl string
 	var movementThreshold int
 	var cameraViewLength float64
 
 	flag.IntVar(&movementThreshold, "threshold", 2000, "Movement threshold")
 	flag.Float64Var(&cameraViewLength, "length", 0.0, "Length of the camera view")
-	flag.StringVar(&videoPath, "video", "", "Video filename")
+	flag.StringVar(&videoPath, "video-file", "", "Video file")
+	flag.StringVar(&videoUrl, "video-url", "", "Video url")
 	flag.Parse()
 
-	if videoPath == "" {
-		fmt.Println("Error: missing video filename option")
+	if videoPath == "" && videoUrl == "" {
+		fmt.Println("Error: missing video file or url option")
 		os.Exit(1)
 	}
 
-	stream, err := video.NewStream(videoPath)
-	if err != nil {
-		log.Fatalf("Error: unable to open video file: %v\n", err)
+	var stream *video.Stream
+	var err error
+
+	if videoUrl != "" {
+		stream, err = video.NewDeviceStream(videoUrl)
+		if err != nil {
+			log.Fatalf("Error: unable to open video url: %v\n", err)
+		}
+		defer stream.Close()
+	} else if videoPath != "" {
+		stream, err = video.NewFileStream(videoPath)
+		if err != nil {
+			log.Fatalf("Error: unable to open video file: %v\n", err)
+		}
+		defer stream.Close()
 	}
-	defer stream.Close()
 
 	fps := stream.Fps()
 	if fps <= 0 {
@@ -60,6 +73,6 @@ func main() {
 			movementTime := float64(detectedMotion.FramesCount()) / fps
 			fmt.Printf("Motion duration: %.2f seconds.\n", movementTime)
 			speed := (cameraViewLength / movementTime) * 3.6
-			fmt.Printf("Speed: %.2f km/h.\n", speed)
+			fmt.Printf("Speed: %.2f km/h.\n\n", speed)
 		})
 }

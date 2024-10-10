@@ -11,10 +11,18 @@ type Stream struct {
 	Video *gocv.VideoCapture
 }
 
-func NewStream(videoPath string) (*Stream, error) {
+func NewFileStream(videoPath string) (*Stream, error) {
 	video, err := gocv.VideoCaptureFile(videoPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to open video file: %v", err)
+	}
+	return &Stream{Video: video}, nil
+}
+
+func NewDeviceStream(videoUrl string) (*Stream, error) {
+	video, err := gocv.OpenVideoCapture(videoUrl)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open video url: %v", err)
 	}
 	return &Stream{Video: video}, nil
 }
