@@ -30,3 +30,17 @@ func (s *Stream) Fps() float64 {
 func (s *Stream) TimeAtFrame(frame *frame.Frame) float64 {
 	return float64(frame.FrameIndex()) / s.Fps()
 }
+
+func (s *Stream) Read(frameIndex int) *frame.Frame {
+	currentFrame := gocv.NewMat()
+	if ok := s.Video.Read(&currentFrame); !ok || currentFrame.Empty() {
+		return nil
+	}
+
+	frame, err := frame.NewFrame(frameIndex, currentFrame)
+	if err != nil {
+		return nil
+	}
+
+	return frame
+}

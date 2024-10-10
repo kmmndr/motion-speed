@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"log"
 	"motionspeed/internal/frame"
-
-	"gocv.io/x/gocv"
+	"motionspeed/internal/video"
 )
 
 type Motion struct {
@@ -46,28 +45,25 @@ func (md *MotionDetector) Speed(duration float64) float64 {
 	return (md.cameraViewLength / duration) * 3.6
 }
 
-func (md *MotionDetector) Detect(video *gocv.VideoCapture, onMotionStart func(*frame.Frame), onMotionEnd func(*frame.Frame)) {
-	fps := video.Get(gocv.VideoCaptureFPS)
-	if fps <= 0 {
-		log.Fatal("Error: unable to get video frame rate")
-	}
-	fmt.Printf("Video frame rate: %.2f fps\n", fps)
+func (md *MotionDetector) Detect(stream *video.Stream, onMotionStart func(*frame.Frame), onMotionEnd func(*frame.Frame), afterMotion func(*Motion)) {
+	md.detect(stream, onMotionStart, onMotionEnd, afterMotion)
+}
+
+func (md *MotionDetector) detect(stream *video.Stream, onMotionStart func(*frame.Frame), onMotionEnd func(*frame.Frame), afterMotion func(*Motion)) {
+	var currentFrame *frame.Frame
+	var startFrame *frame.Frame
+	var endFrame *frame.Frame
 
 	frameIndex := 0
 	isMovementDetected := false
 	movementFrameCount := 0
 
 	for {
-		currentFrame := gocv.NewMat()
-		if ok := video.Read(&currentFrame); !ok || currentFrame.Empty() {
+		if currentFrame = stream.Read(frameIndex); currentFrame == nil {
 			break
 		}
 
-		frame, err := frame.NewFrame(frameIndex, currentFrame)
-		if err != nil {
-			log.Printf("Unable to create Frame : %v", err)
-		}
-		grayFrame, err := frame.Gray()
+		grayFrame, err := currentFrame.Gray()
 		if err != nil {
 			log.Printf("Unable to create Frame : %v", err)
 		}
