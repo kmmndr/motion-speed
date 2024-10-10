@@ -8,6 +8,26 @@ import (
 	"gocv.io/x/gocv"
 )
 
+type Motion struct {
+	startFrame *frame.Frame
+	endFrame   *frame.Frame
+}
+
+func NewMotion(startFrame *frame.Frame, endFrame *frame.Frame) (*Motion, error) {
+	if startFrame.Mat().Closed() || endFrame.Mat().Closed() {
+		return nil, errors.New("Frame is empty")
+	}
+
+	return &Motion{
+		startFrame: startFrame,
+		endFrame:   endFrame,
+	}, nil
+}
+
+func (m *Motion) FramesCount() int {
+	return (m.endFrame.FrameIndex() - m.startFrame.FrameIndex())
+}
+
 type MotionDetector struct {
 	threshold        int
 	cameraViewLength float64
