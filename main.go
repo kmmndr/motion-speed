@@ -19,12 +19,14 @@ func main() {
 	var motionThreshold float64
 	var cameraViewLength float64
 	var printMotion bool
+	var commandTmpl string
 
 	flag.Float64Var(&motionThreshold, "motion-threshold", 0.5, "Motion threshold %")
 	flag.Float64Var(&cameraViewLength, "length", 0.0, "Length of the camera view")
 	flag.StringVar(&videoPath, "video-file", "", "Video file")
 	flag.StringVar(&videoUrl, "video-url", "", "Video url")
 	flag.BoolVar(&printMotion, "print", false, "print motion")
+	flag.StringVar(&commandTmpl, "command", "", "command line to run after motion (ex: echo {{.Date}} {{.Duration}} {{.Speed}})")
 	flag.Parse()
 
 	if videoPath == "" && videoUrl == "" {
@@ -81,6 +83,41 @@ func main() {
 				fmt.Printf("Mean Diff Percentage: %.2f%%.\n", detectedMotion.MeanDiffPercentage())
 				fmt.Printf("Speed: %.2f km/h.\n", speed)
 				fmt.Printf("Date: %s\n\n", now)
+			}
+
+			if commandTmpl != "" {
+				t, err := template.New("greeting").Parse(commandTmpl)
+				if err != nil {
+					log.Fatalf("Error parsing template: %v", err)
+				}
+
+				data := struct {
+					Duration string
+					Speed    string
+					Date     string
+				}{
+					Duration: fmt.Sprintf("%.2f", motionDuration),
+					Speed:    fmt.Sprintf("%.2f", speed),
+					Date:     now,
+				}
+				var buf bytes.Buffer
+
+				if err := t.Execute(&buf, data); err != nil {
+					log.Fatalf("Error executing template: %v", err)
+				}
+
+				fmt.Printf("Executing command: %s\n", buf.String())
+
+				cmd := exec.Command("sh", "-c", buf.String())
+
+				var out bytes.Buffer
+				cmd.Stdout = &out
+
+				if err := cmd.Run(); err != nil {
+					log.Fatalf("Error executing command: %v", err)
+				}
+
+				fmt.Println(out.String())
 			}
 		})
 }
