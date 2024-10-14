@@ -2,10 +2,38 @@ package motion
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"motionspeed/internal/frame"
 	"motionspeed/internal/video"
+	"time"
 )
+
+type MotionReport struct {
+	motion *Motion
+	sensor *Sensor
+
+	Duration           string
+	Speed              string
+	Date               string
+	MeanDiffPercentage string
+}
+
+func NewMotionReport(motion *Motion, sensor *Sensor) *MotionReport {
+	motionDuration := float64(motion.FramesCount()) / float64(sensor.Fps())
+	speed := (sensor.cameraViewLength / motionDuration) * 3.6
+	now := time.Now().Format(time.RFC3339)
+
+	return &MotionReport{
+		motion: motion,
+		sensor: sensor,
+
+		Duration:           fmt.Sprintf("%.2f", motionDuration),
+		Speed:              fmt.Sprintf("%.2f", speed),
+		Date:               now,
+		MeanDiffPercentage: fmt.Sprintf("%.2f", motion.MeanDiffPercentage()),
+	}
+}
 
 type Motion struct {
 	startFrame         *frame.Frame
@@ -33,29 +61,39 @@ func (m *Motion) FramesCount() int {
 	return (m.endFrame.FrameIndex() - m.startFrame.FrameIndex())
 }
 
-type MotionDetector struct {
+type Sensor struct {
+	stream           *video.Stream
 	threshold        float64
 	cameraViewLength float64
 	frameBuffer      *frame.FrameBuffer
 }
 
-func NewMotionDetector(threshold float64, length float64) *MotionDetector {
-	return &MotionDetector{
+func NewSensor(stream *video.Stream, threshold float64, length float64) *Sensor {
+	return &Sensor{
+		stream:           stream,
 		threshold:        threshold,
 		cameraViewLength: length,
 		frameBuffer:      frame.NewFrameBuffer(),
 	}
 }
 
-func (md *MotionDetector) Speed(duration float64) float64 {
-	return (md.cameraViewLength / duration) * 3.6
+func (s *Sensor) TimeAtFrame(frame *frame.Frame) float64 {
+	return s.stream.TimeAtFrame(frame)
 }
 
-func (md *MotionDetector) Detect(stream *video.Stream, onMotionStart func(*frame.Frame), onMotionEnd func(*frame.Frame), afterMotion func(*Motion)) {
-	md.detect(stream, onMotionStart, onMotionEnd, afterMotion)
+func (s *Sensor) Fps() float64 {
+	return s.stream.Fps()
 }
 
-func (md *MotionDetector) detect(stream *video.Stream, onMotionStart func(*frame.Frame), onMotionEnd func(*frame.Frame), afterMotion func(*Motion)) {
+func (s *Sensor) Speed(duration float64) float64 {
+	return (s.cameraViewLength / duration) * 3.6
+}
+
+func (s *Sensor) Detect(onMotionStart func(*frame.Frame), onMotionEnd func(*frame.Frame), afterMotion func(*Motion)) {
+	s.detect(onMotionStart, onMotionEnd, afterMotion)
+}
+
+func (s *Sensor) detect(onMotionStart func(*frame.Frame), onMotionEnd func(*frame.Frame), afterMotion func(*Motion)) {
 	var currentFrame *frame.Frame
 	var startFrame *frame.Frame
 	var endFrame *frame.Frame
@@ -65,7 +103,7 @@ func (md *MotionDetector) detect(stream *video.Stream, onMotionStart func(*frame
 	movementFrameCount := 0
 
 	for {
-		if currentFrame = stream.Read(frameIndex); currentFrame == nil {
+		if currentFrame = s.stream.Read(frameIndex); currentFrame == nil {
 			break
 		}
 
@@ -77,15 +115,15 @@ func (md *MotionDetector) detect(stream *video.Stream, onMotionStart func(*frame
 
 		frameIndex++
 
-		md.frameBuffer.UpdateAverageFrame(grayFrame)
-		diffPercentage := md.frameBuffer.DiffPercentage(grayFrame)
+		s.frameBuffer.UpdateAverageFrame(grayFrame)
+		diffPercentage := s.frameBuffer.DiffPercentage(grayFrame)
 
 		if diffPercentage < 0 {
 			log.Fatal("ko")
 		}
 
-		if diffPercentage > md.threshold {
-			md.frameBuffer.UpdateAverageDiffPercentage(grayFrame)
+		if diffPercentage > s.threshold {
+			s.frameBuffer.UpdateAverageDiffPercentage(grayFrame)
 			if !isMovementDetected { // Motion start
 				isMovementDetected = true
 				startFrame, _ = currentFrame.Clone()
@@ -102,13 +140,13 @@ func (md *MotionDetector) detect(stream *video.Stream, onMotionStart func(*frame
 			if startFrame == nil {
 				log.Fatalf("err : %v", err)
 			}
-			motion, err := NewMotion(startFrame, endFrame, md.frameBuffer.MeanDiffPercentage())
+			motion, err := NewMotion(startFrame, endFrame, s.frameBuffer.MeanDiffPercentage())
 			if err != nil {
 				log.Fatalf("err : %v", err)
 			}
 			afterMotion(motion)
 
-			md.frameBuffer.Reset()
+			s.frameBuffer.Reset()
 
 			startFrame.Close()
 			endFrame.Close()
