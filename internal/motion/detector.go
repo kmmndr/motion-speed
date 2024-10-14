@@ -8,19 +8,25 @@ import (
 )
 
 type Motion struct {
-	startFrame *frame.Frame
-	endFrame   *frame.Frame
+	startFrame         *frame.Frame
+	endFrame           *frame.Frame
+	meanDiffPercentage float64
 }
 
-func NewMotion(startFrame *frame.Frame, endFrame *frame.Frame) (*Motion, error) {
+func NewMotion(startFrame *frame.Frame, endFrame *frame.Frame, meanDiffPercentage float64) (*Motion, error) {
 	if startFrame.Mat().Closed() || endFrame.Mat().Closed() {
 		return nil, errors.New("Frame is empty")
 	}
 
 	return &Motion{
-		startFrame: startFrame,
-		endFrame:   endFrame,
+		startFrame:         startFrame,
+		endFrame:           endFrame,
+		meanDiffPercentage: meanDiffPercentage,
 	}, nil
+}
+
+func (m *Motion) MeanDiffPercentage() float64 {
+	return m.meanDiffPercentage
 }
 
 func (m *Motion) FramesCount() int {
@@ -28,12 +34,12 @@ func (m *Motion) FramesCount() int {
 }
 
 type MotionDetector struct {
-	threshold        int
+	threshold        float64
 	cameraViewLength float64
 	frameBuffer      *frame.FrameBuffer
 }
 
-func NewMotionDetector(threshold int, length float64) *MotionDetector {
+func NewMotionDetector(threshold float64, length float64) *MotionDetector {
 	return &MotionDetector{
 		threshold:        threshold,
 		cameraViewLength: length,
@@ -71,21 +77,23 @@ func (md *MotionDetector) detect(stream *video.Stream, onMotionStart func(*frame
 
 		frameIndex++
 
-		nonZeroPixels := md.frameBuffer.PixelsDiffCount(grayFrame)
+		md.frameBuffer.UpdateAverageFrame(grayFrame)
+		diffPercentage := md.frameBuffer.DiffPercentage(grayFrame)
 
-		if nonZeroPixels < 0 {
+		if diffPercentage < 0 {
 			log.Fatal("ko")
 		}
 
-		if nonZeroPixels > md.threshold {
-			if !isMovementDetected {
+		if diffPercentage > md.threshold {
+			md.frameBuffer.UpdateAverageDiffPercentage(grayFrame)
+			if !isMovementDetected { // Motion start
 				isMovementDetected = true
 				startFrame, _ = currentFrame.Clone()
 
 				onMotionStart(startFrame)
 			}
 			movementFrameCount++
-		} else if isMovementDetected {
+		} else if isMovementDetected { // Motion end
 			isMovementDetected = false
 			endFrame, _ = currentFrame.Clone()
 
@@ -94,11 +102,13 @@ func (md *MotionDetector) detect(stream *video.Stream, onMotionStart func(*frame
 			if startFrame == nil {
 				log.Fatalf("err : %v", err)
 			}
-			motion, err := NewMotion(startFrame, endFrame)
+			motion, err := NewMotion(startFrame, endFrame, md.frameBuffer.MeanDiffPercentage())
 			if err != nil {
 				log.Fatalf("err : %v", err)
 			}
 			afterMotion(motion)
+
+			md.frameBuffer.Reset()
 
 			startFrame.Close()
 			endFrame.Close()

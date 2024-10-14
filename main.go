@@ -16,13 +16,15 @@ import (
 func main() {
 	var videoPath string
 	var videoUrl string
-	var movementThreshold int
+	var motionThreshold float64
 	var cameraViewLength float64
+	var printMotion bool
 
-	flag.IntVar(&movementThreshold, "threshold", 2000, "Movement threshold")
+	flag.Float64Var(&motionThreshold, "motion-threshold", 0.5, "Motion threshold %")
 	flag.Float64Var(&cameraViewLength, "length", 0.0, "Length of the camera view")
 	flag.StringVar(&videoPath, "video-file", "", "Video file")
 	flag.StringVar(&videoUrl, "video-url", "", "Video url")
+	flag.BoolVar(&printMotion, "print", false, "print motion")
 	flag.Parse()
 
 	if videoPath == "" && videoUrl == "" {
@@ -53,7 +55,7 @@ func main() {
 	}
 	fmt.Printf("Video frame rate: %.2f fps\n", fps)
 
-	motionDetector := motion.NewMotionDetector(movementThreshold, cameraViewLength)
+	motionDetector := motion.NewMotionDetector(motionThreshold, cameraViewLength)
 	motionDetector.Detect(stream,
 		func(startFrame *frame.Frame) {
 			startTime := stream.TimeAtFrame(startFrame)
@@ -70,9 +72,15 @@ func main() {
 			}
 		},
 		func(detectedMotion *motion.Motion) {
-			movementTime := float64(detectedMotion.FramesCount()) / fps
-			fmt.Printf("Motion duration: %.2f seconds.\n", movementTime)
-			speed := (cameraViewLength / movementTime) * 3.6
-			fmt.Printf("Speed: %.2f km/h.\n\n", speed)
+			motionDuration := float64(detectedMotion.FramesCount()) / fps
+			speed := (cameraViewLength / motionDuration) * 3.6
+			now := time.Now().Format(time.RFC3339)
+
+			if printMotion {
+				fmt.Printf("Motion duration: %.2f seconds.\n", motionDuration)
+				fmt.Printf("Mean Diff Percentage: %.2f%%.\n", detectedMotion.MeanDiffPercentage())
+				fmt.Printf("Speed: %.2f km/h.\n", speed)
+				fmt.Printf("Date: %s\n\n", now)
+			}
 		})
 }
