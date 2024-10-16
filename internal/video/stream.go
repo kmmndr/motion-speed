@@ -45,7 +45,7 @@ func (s *Stream) Read(frameIndex int) *frame.Frame {
 		return nil
 	}
 
-	frame, err := frame.NewFrame(frameIndex, currentFrame)
+	frame, err := frame.NewFrame(frameIndex, &currentFrame)
 	if err != nil {
 		return nil
 	}

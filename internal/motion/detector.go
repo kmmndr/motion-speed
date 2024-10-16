@@ -124,6 +124,7 @@ func (s *Sensor) detect(onMotionStart func(*frame.Frame), onMotionEnd func(*fram
 
 		if diffPercentage > s.threshold {
 			s.frameBuffer.UpdateAverageDiffPercentage(grayFrame)
+
 			if !isMovementDetected { // Motion start
 				isMovementDetected = true
 				startFrame, _ = currentFrame.Clone()
@@ -149,9 +150,12 @@ func (s *Sensor) detect(onMotionStart func(*frame.Frame), onMotionEnd func(*fram
 			s.frameBuffer.Reset()
 
 			startFrame.Close()
+			startFrame = nil
 			endFrame.Close()
+			endFrame = nil
 		}
 
 		currentFrame.Close()
+		currentFrame = nil
 	}
 }

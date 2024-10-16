@@ -8,18 +8,19 @@ import (
 
 type Frame struct {
 	frameIndex int
-	mat        gocv.Mat
+	mat        *gocv.Mat
 }
 
-func NewFrame(frameIndex int, mat gocv.Mat) (*Frame, error) {
+func NewFrame(frameIndex int, mat *gocv.Mat) (*Frame, error) {
 	if mat.Empty() {
 		return nil, errors.New("Frame is empty")
 	}
+
 	return &Frame{frameIndex: frameIndex, mat: mat}, nil
 }
 
 func (f *Frame) Mat() *gocv.Mat {
-	return &f.mat
+	return f.mat
 }
 
 func (f *Frame) FrameIndex() int {
@@ -28,12 +29,15 @@ func (f *Frame) FrameIndex() int {
 
 func (f *Frame) Gray() (*Frame, error) {
 	gray := gocv.NewMat()
-	gocv.CvtColor(f.mat, &gray, gocv.ColorBGRToGray)
-	return NewFrame(f.frameIndex, gray)
+	gocv.CvtColor(*f.mat, &gray, gocv.ColorBGRToGray)
+
+	return NewFrame(f.frameIndex, &gray)
 }
 
 func (f *Frame) Clone() (*Frame, error) {
-	return NewFrame(f.frameIndex, f.mat.Clone())
+	clone := f.mat.Clone()
+
+	return NewFrame(f.frameIndex, &clone)
 }
 
 func (f *Frame) Height() int {
@@ -54,15 +58,17 @@ func (f *Frame) Close() {
 
 type FrameBuffer struct {
 	frameIndex            int
-	averageMat            gocv.Mat
+	averageMat            *gocv.Mat
 	lastDiffPercentage    float64
 	averageDiffPercentage float64
 }
 
 func NewFrameBuffer() *FrameBuffer {
+	averageMat := gocv.NewMat()
+
 	return &FrameBuffer{
 		frameIndex:            0,
-		averageMat:            gocv.NewMat(),
+		averageMat:            &averageMat,
 		lastDiffPercentage:    0,
 		averageDiffPercentage: -1,
 	}
@@ -74,9 +80,9 @@ func (fb *FrameBuffer) FramesCountSinceStart(currentFrame *Frame) int {
 
 func (fb *FrameBuffer) UpdateAverageFrame(currentFrame *Frame) {
 	if fb.averageMat.Empty() {
-		currentFrame.mat.ConvertTo(&fb.averageMat, gocv.MatTypeCV64F)
+		currentFrame.mat.ConvertTo(fb.averageMat, gocv.MatTypeCV64F)
 	} else {
-		gocv.AccumulatedWeighted(currentFrame.mat, &fb.averageMat, 0.5)
+		gocv.AccumulatedWeighted(*currentFrame.mat, fb.averageMat, 0.5)
 	}
 }
 
@@ -117,7 +123,7 @@ func (fb *FrameBuffer) PixelsDiffCount(currentFrame *Frame) int {
 
 	fb.averageMat.ConvertTo(&averageConverted, gocv.MatTypeCV8U)
 
-	gocv.AbsDiff(currentFrame.mat, averageConverted, &diff)
+	gocv.AbsDiff(*currentFrame.mat, averageConverted, &diff)
 	gocv.Threshold(diff, &diff, 25, 255, gocv.ThresholdBinary)
 	nonZeroPixels := gocv.CountNonZero(diff)
 
