@@ -16,6 +16,33 @@ import (
 	"gocv.io/x/gocv"
 )
 
+var config Config
+
+type Config struct {
+	videoPath        string
+	videoUrl         string
+	motionThreshold  float64
+	cameraViewLength float64
+	printMotion      bool
+	printTmpl        string
+	commandTmpl      string
+	saveFrames       bool
+}
+
+func init() {
+	config = Config{}
+
+	flag.Float64Var(&config.motionThreshold, "motion-threshold", 0.5, "Motion threshold %")
+	flag.Float64Var(&config.cameraViewLength, "length", 0.0, "Length of the camera view")
+	flag.StringVar(&config.videoPath, "video-file", "", "Video file")
+	flag.StringVar(&config.videoUrl, "video-url", "", "Video url")
+	flag.BoolVar(&config.printMotion, "print", false, "print motion")
+	flag.StringVar(&config.printTmpl, "print-format", "", "print format")
+	flag.StringVar(&config.commandTmpl, "command", "", "command line to run after motion (ex: echo '{{.Date}} {{.Duration}} {{.Speed}})'")
+
+	flag.Parse()
+}
+
 func expandTemplate(tmpl string, report *motion.MotionReport) string {
 	t, err := template.New("").Parse(tmpl)
 	if err != nil {
@@ -32,30 +59,14 @@ func expandTemplate(tmpl string, report *motion.MotionReport) string {
 }
 
 func main() {
-	var videoPath string
-	var videoUrl string
-	var motionThreshold float64
-	var cameraViewLength float64
-	var printMotion bool
-	var printTmpl string
-	var commandTmpl string
 
-	flag.Float64Var(&motionThreshold, "motion-threshold", 0.5, "Motion threshold %")
-	flag.Float64Var(&cameraViewLength, "length", 0.0, "Length of the camera view")
-	flag.StringVar(&videoPath, "video-file", "", "Video file")
-	flag.StringVar(&videoUrl, "video-url", "", "Video url")
-	flag.BoolVar(&printMotion, "print", false, "print motion")
-	flag.StringVar(&printTmpl, "print-format", "", "print format")
-	flag.StringVar(&commandTmpl, "command", "", "command line to run after motion (ex: echo {{.Date}} {{.Duration}} {{.Speed}})")
-	flag.Parse()
-
-	if videoPath == "" && videoUrl == "" {
+	if config.videoPath == "" && config.videoUrl == "" {
 		fmt.Println("Error: missing video file or url option")
 		os.Exit(1)
 	}
 
-	if printTmpl == "" {
-		printTmpl = "Date: {{.Date}}\n" +
+	if config.printTmpl == "" {
+		config.printTmpl = "Date: {{.Date}}\n" +
 			"Motion duration: {{.Duration}} seconds\n" +
 			"Mean Diff Percentage: {{.MeanDiffPercentage}}%\n" +
 			"Speed: {{.Speed}} km/h\n"
@@ -64,14 +75,14 @@ func main() {
 	var stream *video.Stream
 	var err error
 
-	if videoUrl != "" {
-		stream, err = video.NewDeviceStream(videoUrl)
+	if config.videoUrl != "" {
+		stream, err = video.NewDeviceStream(config.videoUrl)
 		if err != nil {
 			log.Fatalf("Error: unable to open video url: %v\n", err)
 		}
 		defer stream.Close()
-	} else if videoPath != "" {
-		stream, err = video.NewFileStream(videoPath)
+	} else if config.videoPath != "" {
+		stream, err = video.NewFileStream(config.videoPath)
 		if err != nil {
 			log.Fatalf("Error: unable to open video file: %v\n", err)
 		}
@@ -84,7 +95,7 @@ func main() {
 	}
 	fmt.Printf("Video frame rate: %.2f fps\n", fps)
 
-	sensor := motion.NewSensor(stream, motionThreshold, cameraViewLength)
+	sensor := motion.NewSensor(stream, config.motionThreshold, config.cameraViewLength)
 	sensor.Detect(
 		func(startFrame *frame.Frame) {
 			startTime := sensor.TimeAtFrame(startFrame)
@@ -103,14 +114,14 @@ func main() {
 		func(detectedMotion *motion.Motion) {
 			motionReport := motion.NewMotionReport(detectedMotion, sensor)
 
-			if printMotion {
-				str := expandTemplate(printTmpl, motionReport)
+			if config.printMotion {
+				str := expandTemplate(config.printTmpl, motionReport)
 
 				fmt.Printf("%s\n", str)
 			}
 
-			if commandTmpl != "" {
-				str := expandTemplate(commandTmpl, motionReport)
+			if config.commandTmpl != "" {
+				str := expandTemplate(config.commandTmpl, motionReport)
 
 				fmt.Printf("Executing command: %s\n", str)
 
