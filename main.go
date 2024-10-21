@@ -19,26 +19,35 @@ import (
 var config Config
 
 type Config struct {
-	videoPath        string
-	videoUrl         string
+	videoPath string
+	videoUrl  string
+
 	motionThreshold  float64
 	cameraViewLength float64
-	printMotion      bool
-	printTmpl        string
-	commandTmpl      string
-	saveFrames       bool
+
+	printMotion bool
+	printTmpl   string
+
+	commandTmpl string
+
+	saveFrames bool
 }
 
 func init() {
 	config = Config{}
 
-	flag.Float64Var(&config.motionThreshold, "motion-threshold", 0.5, "Motion threshold %")
-	flag.Float64Var(&config.cameraViewLength, "length", 0.0, "Length of the camera view")
 	flag.StringVar(&config.videoPath, "video-file", "", "Video file")
 	flag.StringVar(&config.videoUrl, "video-url", "", "Video url")
+
+	flag.Float64Var(&config.motionThreshold, "motion-threshold", 0.5, "Motion threshold %")
+	flag.Float64Var(&config.cameraViewLength, "length", 0.0, "Length of the camera view")
+
 	flag.BoolVar(&config.printMotion, "print", false, "print motion")
 	flag.StringVar(&config.printTmpl, "print-format", "", "print format")
+
 	flag.StringVar(&config.commandTmpl, "command", "", "command line to run after motion (ex: echo '{{.Date}} {{.Duration}} {{.Speed}})'")
+
+	flag.BoolVar(&config.saveFrames, "save-frames", false, "Save start/end frames")
 
 	flag.Parse()
 }
@@ -98,17 +107,21 @@ func main() {
 	sensor := motion.NewSensor(stream, config.motionThreshold, config.cameraViewLength)
 	sensor.Detect(
 		func(startFrame *frame.Frame) {
-			startTime := sensor.TimeAtFrame(startFrame)
-			fmt.Printf("Motion started at: %.2f seconds.\n", startTime)
-			if !gocv.IMWrite("motion-start.jpg", *startFrame.Mat()) {
-				log.Fatal("Unable to write image")
+			if config.saveFrames {
+				startTime := sensor.TimeAtFrame(startFrame)
+				fmt.Printf("Motion started at: %.2f seconds.\n", startTime)
+				if !gocv.IMWrite("motion-start.jpg", *startFrame.Mat()) {
+					log.Fatal("Unable to write image")
+				}
 			}
 		},
 		func(endFrame *frame.Frame) {
-			endTime := sensor.TimeAtFrame(endFrame)
-			fmt.Printf("Motion ended at: %.2f seconds.\n", endTime)
-			if !gocv.IMWrite("motion-end.jpg", *endFrame.Mat()) {
-				log.Fatal("Unable to write image")
+			if config.saveFrames {
+				endTime := sensor.TimeAtFrame(endFrame)
+				fmt.Printf("Motion ended at: %.2f seconds.\n", endTime)
+				if !gocv.IMWrite("motion-end.jpg", *endFrame.Mat()) {
+					log.Fatal("Unable to write image")
+				}
 			}
 		},
 		func(detectedMotion *motion.Motion) {
