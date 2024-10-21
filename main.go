@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"text/template"
@@ -16,6 +17,7 @@ import (
 	"gocv.io/x/gocv"
 )
 
+var logger *slog.Logger
 var config Config
 
 type Config struct {
@@ -34,6 +36,9 @@ type Config struct {
 }
 
 func init() {
+	logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	config = Config{}
 
 	flag.StringVar(&config.videoPath, "video-file", "", "Video file")
@@ -81,6 +86,8 @@ func main() {
 			"Speed: {{.Speed}} km/h\n"
 	}
 
+	logger.Info("Start your engine \\o//")
+
 	var stream *video.Stream
 	var err error
 
@@ -102,7 +109,7 @@ func main() {
 	if fps <= 0 {
 		log.Fatal("Error: unable to get video frame rate")
 	}
-	fmt.Printf("Video frame rate: %.2f fps\n", fps)
+	logger.Debug(fmt.Sprintf("Video frame rate: %.2f fps\n", fps))
 
 	sensor := motion.NewSensor(stream, config.motionThreshold, config.cameraViewLength)
 	sensor.Detect(
