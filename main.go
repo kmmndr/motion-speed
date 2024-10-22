@@ -59,7 +59,7 @@ func init() {
 	config = Config{}
 
 	flag.StringVar(&config.videoPath, "video-file", "", "Video file")
-	flag.StringVar(&config.videoUrl, "video-url", "", "Video url")
+	flag.StringVar(&config.videoUrl, "video-url", os.Getenv("VIDEO_URL"), "Video url")
 
 	flag.Float64Var(&config.motionThreshold, "motion-threshold", 0.5, "Motion threshold %")
 	flag.Float64Var(&config.cameraViewLength, "length", 0.0, "Length of the camera view")
@@ -72,13 +72,13 @@ func init() {
 
 	flag.BoolVar(&config.saveFrames, "save-frames", false, "Save start/end frames")
 
-	flag.BoolVar(&config.mqtt, "mqtt", false, "Enable MQTT")
-	flag.StringVar(&config.mqttBroker, "mqtt-broker", "", "MQTT Broker")
-	flag.StringVar(&mqttPortString, "mqtt-port", "", "MQTT Port")
+	flag.BoolVar(&config.mqtt, "mqtt", os.Getenv("MQTT") == "true", "Enable MQTT")
+	flag.StringVar(&config.mqttBroker, "mqtt-broker", os.Getenv("MQTT_BROKER"), "MQTT Broker")
+	flag.StringVar(&mqttPortString, "mqtt-port", os.Getenv("MQTT_PORT"), "MQTT Port")
 	flag.StringVar(&config.mqttClientId, "mqtt-client-id", "motion-speed", "MQTT Client ID")
-	flag.StringVar(&config.mqttCaFile, "mqtt-ca-file", "", "MQTT CA file")
-	flag.StringVar(&config.mqttCertificateFile, "mqtt-certificate-file", "", "MQTT Certificate file")
-	flag.StringVar(&config.mqttKeyFile, "mqtt-key-file", "", "MQTT Key file")
+	flag.StringVar(&config.mqttCaFile, "mqtt-ca-file", os.Getenv("MQTT_CA_FILE"), "MQTT CA file")
+	flag.StringVar(&config.mqttCertificateFile, "mqtt-certificate-file", os.Getenv("MQTT_CERTIFICATE_FILE"), "MQTT Certificate file")
+	flag.StringVar(&config.mqttKeyFile, "mqtt-key-file", os.Getenv("MQTT_KEY_FILE"), "MQTT Key file")
 
 	flag.Parse()
 
