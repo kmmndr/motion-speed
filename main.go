@@ -194,7 +194,7 @@ func main() {
 		func(startFrame *frame.Frame) {
 			if config.saveFrames {
 				startTime := sensor.TimeAtFrame(startFrame)
-				fmt.Printf("Motion started at: %.2f seconds.\n", startTime)
+				logger.Info(fmt.Sprintf("Motion started at: %.2f seconds.\n", startTime))
 				if !gocv.IMWrite("motion-start.jpg", *startFrame.Mat()) {
 					log.Fatal("Unable to write image")
 				}
@@ -203,7 +203,7 @@ func main() {
 		func(endFrame *frame.Frame) {
 			if config.saveFrames {
 				endTime := sensor.TimeAtFrame(endFrame)
-				fmt.Printf("Motion ended at: %.2f seconds.\n", endTime)
+				logger.Info(fmt.Sprintf("Motion ended at: %.2f seconds.\n", endTime))
 				if !gocv.IMWrite("motion-end.jpg", *endFrame.Mat()) {
 					log.Fatal("Unable to write image")
 				}
@@ -237,18 +237,17 @@ func main() {
 			if config.commandTmpl != "" {
 				str := expandTemplate(config.commandTmpl, motionReport)
 
-				fmt.Printf("Executing command: %s\n", str)
+				logger.Info(fmt.Sprintf("Executing command: %s", str))
 
 				cmd := exec.Command("sh", "-c", str)
 
 				var out bytes.Buffer
 				cmd.Stdout = &out
-
 				if err := cmd.Run(); err != nil {
 					log.Fatalf("Error executing command: %v", err)
 				}
 
-				fmt.Println(out.String())
+				logger.Info(fmt.Sprintf("Command returned: %s", out.String()))
 			}
 		})
 }
