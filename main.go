@@ -53,7 +53,7 @@ type Config struct {
 func init() {
 	var mqttPortString string
 
-	logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger = slog.New(slog.NewTextHandler(os.Stderr, nil))
 	slog.SetDefault(logger)
 
 	config = Config{}
