@@ -13,10 +13,10 @@ type MotionReport struct {
 	motion *Motion
 	sensor *Sensor
 
-	Duration           string
-	Speed              string
-	Date               string
-	MeanDiffPercentage string
+	Duration           string `json:"duration"`
+	Speed              string `json:"speed"`
+	Date               string `json:"date"`
+	MeanDiffPercentage string `json:"mean_diff_percentage"`
 }
 
 func NewMotionReport(motion *Motion, sensor *Sensor) *MotionReport {

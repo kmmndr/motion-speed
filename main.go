@@ -2,18 +2,24 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"log/slog"
 	"os"
 	"os/exec"
+	"strconv"
 	"text/template"
+	"time"
 
 	"motionspeed/internal/frame"
 	"motionspeed/internal/motion"
 	"motionspeed/internal/video"
 
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"gocv.io/x/gocv"
 )
 
@@ -33,9 +39,19 @@ type Config struct {
 	commandTmpl string
 
 	saveFrames bool
+
+	mqtt                bool
+	mqttBroker          string
+	mqttPort            int
+	mqttClientId        string
+	mqttCaFile          string
+	mqttCertificateFile string
+	mqttKeyFile         string
 }
 
 func init() {
+	var mqttPortString string
+
 	logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
@@ -54,9 +70,20 @@ func init() {
 
 	flag.BoolVar(&config.saveFrames, "save-frames", false, "Save start/end frames")
 
-	flag.Parse()
-}
+	flag.BoolVar(&config.mqtt, "mqtt", false, "Enable MQTT")
+	flag.StringVar(&config.mqttBroker, "mqtt-broker", "", "MQTT Broker")
+	flag.StringVar(&mqttPortString, "mqtt-port", "", "MQTT Port")
+	flag.StringVar(&config.mqttClientId, "mqtt-client-id", "motion-speed", "MQTT Client ID")
+	flag.StringVar(&config.mqttCaFile, "mqtt-ca-file", "", "MQTT CA file")
+	flag.StringVar(&config.mqttCertificateFile, "mqtt-certificate-file", "", "MQTT Certificate file")
+	flag.StringVar(&config.mqttKeyFile, "mqtt-key-file", "", "MQTT Key file")
 
+	flag.Parse()
+
+	if port, err := strconv.Atoi(mqttPortString); err == nil {
+		config.mqttPort = port
+	}
+}
 func expandTemplate(tmpl string, report *motion.MotionReport) string {
 	t, err := template.New("").Parse(tmpl)
 	if err != nil {
@@ -70,6 +97,46 @@ func expandTemplate(tmpl string, report *motion.MotionReport) string {
 	}
 
 	return buf.String()
+}
+
+func mqttClientOptions() *mqtt.ClientOptions {
+	certpool := x509.NewCertPool()
+
+	if config.mqttCaFile != "" {
+		ca, err := os.ReadFile(config.mqttCaFile)
+		if err != nil {
+			log.Fatalln(err.Error())
+		}
+		certpool.AppendCertsFromPEM(ca)
+	}
+
+	clientKeyPair, err := tls.LoadX509KeyPair(config.mqttCertificateFile, config.mqttKeyFile)
+	if err != nil {
+		panic(err)
+	}
+
+	tlsConfig := tls.Config{
+		RootCAs:            certpool,
+		ClientAuth:         tls.NoClientCert,
+		ClientCAs:          nil,
+		InsecureSkipVerify: true,
+		Certificates:       []tls.Certificate{clientKeyPair},
+	}
+
+	opts := mqtt.NewClientOptions()
+
+	opts.AddBroker(fmt.Sprintf("mqtts://%s:%d", config.mqttBroker, config.mqttPort))
+	opts.SetClientID(config.mqttClientId)
+	opts.SetTLSConfig(&tlsConfig)
+	opts.OnConnect = func(client mqtt.Client) {
+		logger.Info("Connected to MQTT server")
+	}
+	opts.OnConnectionLost = func(client mqtt.Client, err error) {
+		logger.Warn(fmt.Sprintf("Connect lost: %v", err))
+	}
+	opts.SetAutoReconnect(true)
+	opts.SetMaxReconnectInterval(10 * time.Second)
+	return opts
 }
 
 func main() {
@@ -89,7 +156,16 @@ func main() {
 	logger.Info("Start your engine \\o//")
 
 	var stream *video.Stream
+	var mqttClient mqtt.Client
 	var err error
+
+	if config.mqtt {
+		mqttClient = mqtt.NewClient(mqttClientOptions())
+		if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
+			panic(token.Error())
+		}
+		defer mqttClient.Disconnect(250)
+	}
 
 	if config.videoUrl != "" {
 		stream, err = video.NewDeviceStream(config.videoUrl)
@@ -138,6 +214,15 @@ func main() {
 				str := expandTemplate(config.printTmpl, motionReport)
 
 				fmt.Printf("%s\n", str)
+			}
+
+			if config.mqtt {
+				motionReportJson, _ := json.Marshal(motionReport)
+
+				text := string(motionReportJson)
+				logger.Info(fmt.Sprintf("Publishing MQTT Message: %s", text))
+				token := mqttClient.Publish("motions", 0, false, text)
+				token.Wait()
 			}
 
 			if config.commandTmpl != "" {
