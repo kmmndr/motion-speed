@@ -34,6 +34,7 @@ type Config struct {
 	cameraViewLength float64
 
 	printMotion bool
+	printJson   bool
 	printTmpl   string
 
 	commandTmpl string
@@ -64,6 +65,7 @@ func init() {
 	flag.Float64Var(&config.cameraViewLength, "length", 0.0, "Length of the camera view")
 
 	flag.BoolVar(&config.printMotion, "print", false, "print motion")
+	flag.BoolVar(&config.printJson, "print-json", false, "print motion as json")
 	flag.StringVar(&config.printTmpl, "print-format", "", "print format")
 
 	flag.StringVar(&config.commandTmpl, "command", "", "command line to run after motion (ex: echo '{{.Date}} {{.Duration}} {{.Speed}})'")
@@ -211,7 +213,14 @@ func main() {
 			motionReport := motion.NewMotionReport(detectedMotion, sensor)
 
 			if config.printMotion {
-				str := expandTemplate(config.printTmpl, motionReport)
+				var str string
+
+				if config.printJson {
+					motionReportJson, _ := json.Marshal(motionReport)
+					str = string(motionReportJson)
+				} else {
+					str = expandTemplate(config.printTmpl, motionReport)
+				}
 
 				fmt.Printf("%s\n", str)
 			}
