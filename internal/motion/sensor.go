@@ -1,81 +1,11 @@
 package motion
 
 import (
-	"errors"
-	"fmt"
 	"log"
-	"time"
-
-	uuid "github.com/gofrs/uuid/v5"
 
 	"motionspeed/internal/frame"
 	"motionspeed/internal/video"
 )
-
-type MotionReport struct {
-	motion *Motion
-	sensor *Sensor
-
-	UUID               string `json:"uuid"`
-	Duration           string `json:"duration"`
-	Speed              string `json:"speed"`
-	Date               string `json:"date"`
-	MeanDiffPercentage string `json:"mean_diff_percentage"`
-}
-
-func NewMotionReport(motion *Motion, sensor *Sensor) *MotionReport {
-	motionDuration := float64(motion.FramesCount()) / float64(sensor.Fps())
-	speed := (sensor.cameraViewLength / motionDuration) * 3.6
-	now := time.Now().Format(time.RFC3339)
-
-	return &MotionReport{
-		motion: motion,
-		sensor: sensor,
-
-		UUID:               motion.UUID(),
-		Duration:           fmt.Sprintf("%.2f", motionDuration),
-		Speed:              fmt.Sprintf("%.2f", speed),
-		Date:               now,
-		MeanDiffPercentage: fmt.Sprintf("%.2f", motion.MeanDiffPercentage()),
-	}
-}
-
-type Motion struct {
-	startFrame         *frame.Frame
-	endFrame           *frame.Frame
-	meanDiffPercentage float64
-	uuid               uuid.UUID
-}
-
-func NewMotion(startFrame *frame.Frame, endFrame *frame.Frame, meanDiffPercentage float64) (*Motion, error) {
-	if startFrame.Mat().Closed() || endFrame.Mat().Closed() {
-		return nil, errors.New("Frame is empty")
-	}
-
-	ref, err := uuid.NewV4()
-	if err != nil {
-		log.Fatalf("failed to generate UUID: %v", err)
-	}
-
-	return &Motion{
-		startFrame:         startFrame,
-		endFrame:           endFrame,
-		meanDiffPercentage: meanDiffPercentage,
-		uuid:               ref,
-	}, nil
-}
-
-func (m *Motion) MeanDiffPercentage() float64 {
-	return m.meanDiffPercentage
-}
-
-func (m *Motion) UUID() string {
-	return m.uuid.String()
-}
-
-func (m *Motion) FramesCount() int {
-	return (m.endFrame.FrameIndex() - m.startFrame.FrameIndex())
-}
 
 type Sensor struct {
 	stream           *video.Stream
@@ -103,6 +33,10 @@ func (s *Sensor) Fps() float64 {
 
 func (s *Sensor) Speed(duration float64) float64 {
 	return (s.cameraViewLength / duration) * 3.6
+}
+
+func (s *Sensor) DetectMotion(afterMotion func(*Motion)) {
+	s.detect(func(*frame.Frame) {}, func(*frame.Frame) {}, afterMotion)
 }
 
 func (s *Sensor) Detect(onMotionStart func(*frame.Frame), onMotionEnd func(*frame.Frame), afterMotion func(*Motion)) {
