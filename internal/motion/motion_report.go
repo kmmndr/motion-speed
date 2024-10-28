@@ -7,7 +7,7 @@ import (
 
 type MotionReport struct {
 	motion *Motion
-	sensor *Sensor
+	input  *Input
 
 	UUID               string `json:"uuid"`
 	Duration           string `json:"duration"`
@@ -16,14 +16,14 @@ type MotionReport struct {
 	MeanDiffPercentage string `json:"mean_diff_percentage"`
 }
 
-func NewMotionReport(motion *Motion, sensor *Sensor) *MotionReport {
-	motionDuration := float64(motion.FramesCount()) / float64(sensor.Fps())
-	speed := (sensor.cameraViewLength / motionDuration) * 3.6
+func NewMotionReport(motion *Motion, input *Input) *MotionReport {
+	motionDuration := float64(motion.FramesCount()) / float64(input.Fps())
+	speed := (input.cameraViewLength / motionDuration) * 3.6
 	now := time.Now().Format(time.RFC3339)
 
 	return &MotionReport{
 		motion: motion,
-		sensor: sensor,
+		input:  input,
 
 		UUID:               motion.UUID(),
 		Duration:           fmt.Sprintf("%.2f", motionDuration),

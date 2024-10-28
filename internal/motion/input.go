@@ -7,15 +7,15 @@ import (
 	"motionspeed/internal/video"
 )
 
-type Sensor struct {
+type Input struct {
 	stream           *video.Stream
 	threshold        float64
 	cameraViewLength float64
 	frameBuffer      *frame.FrameBuffer
 }
 
-func NewSensor(stream *video.Stream, threshold float64, length float64) *Sensor {
-	return &Sensor{
+func NewInput(stream *video.Stream, threshold float64, length float64) *Input {
+	return &Input{
 		stream:           stream,
 		threshold:        threshold,
 		cameraViewLength: length,
@@ -23,27 +23,27 @@ func NewSensor(stream *video.Stream, threshold float64, length float64) *Sensor 
 	}
 }
 
-func (s *Sensor) TimeAtFrame(frame *frame.Frame) float64 {
-	return s.stream.TimeAtFrame(frame)
+func (i *Input) TimeAtFrame(frame *frame.Frame) float64 {
+	return i.stream.TimeAtFrame(frame)
 }
 
-func (s *Sensor) Fps() float64 {
-	return s.stream.Fps()
+func (i *Input) Fps() float64 {
+	return i.stream.Fps()
 }
 
-func (s *Sensor) Speed(duration float64) float64 {
-	return (s.cameraViewLength / duration) * 3.6
+func (i *Input) Speed(duration float64) float64 {
+	return (i.cameraViewLength / duration) * 3.6
 }
 
-func (s *Sensor) DetectMotion(afterMotion func(*Motion)) {
-	s.detect(func(*frame.Frame) {}, func(*frame.Frame) {}, afterMotion)
+func (i *Input) DetectMotion(afterMotion func(*Motion)) {
+	i.detect(func(*frame.Frame) {}, func(*frame.Frame) {}, afterMotion)
 }
 
-func (s *Sensor) Detect(onMotionStart func(*frame.Frame), onMotionEnd func(*frame.Frame), afterMotion func(*Motion)) {
-	s.detect(onMotionStart, onMotionEnd, afterMotion)
+func (i *Input) Detect(onMotionStart func(*frame.Frame), onMotionEnd func(*frame.Frame), afterMotion func(*Motion)) {
+	i.detect(onMotionStart, onMotionEnd, afterMotion)
 }
 
-func (s *Sensor) detect(onMotionStart func(*frame.Frame), onMotionEnd func(*frame.Frame), afterMotion func(*Motion)) {
+func (i *Input) detect(onMotionStart func(*frame.Frame), onMotionEnd func(*frame.Frame), afterMotion func(*Motion)) {
 	var currentFrame *frame.Frame
 	var startFrame *frame.Frame
 	var endFrame *frame.Frame
@@ -53,7 +53,7 @@ func (s *Sensor) detect(onMotionStart func(*frame.Frame), onMotionEnd func(*fram
 	movementFrameCount := 0
 
 	for {
-		if currentFrame = s.stream.Read(frameIndex); currentFrame == nil {
+		if currentFrame = i.stream.Read(frameIndex); currentFrame == nil {
 			break
 		}
 
@@ -65,15 +65,15 @@ func (s *Sensor) detect(onMotionStart func(*frame.Frame), onMotionEnd func(*fram
 
 		frameIndex++
 
-		s.frameBuffer.UpdateAverageFrame(grayFrame)
-		diffPercentage := s.frameBuffer.DiffPercentage(grayFrame)
+		i.frameBuffer.UpdateAverageFrame(grayFrame)
+		diffPercentage := i.frameBuffer.DiffPercentage(grayFrame)
 
 		if diffPercentage < 0 {
 			log.Fatal("ko")
 		}
 
-		if diffPercentage > s.threshold {
-			s.frameBuffer.UpdateAverageDiffPercentage(grayFrame)
+		if diffPercentage > i.threshold {
+			i.frameBuffer.UpdateAverageDiffPercentage(grayFrame)
 
 			if !isMovementDetected { // Motion start
 				isMovementDetected = true
@@ -91,13 +91,13 @@ func (s *Sensor) detect(onMotionStart func(*frame.Frame), onMotionEnd func(*fram
 			if startFrame == nil {
 				log.Fatalf("err : %v", err)
 			}
-			motion, err := NewMotion(startFrame, endFrame, s.frameBuffer.MeanDiffPercentage())
+			motion, err := NewMotion(startFrame, endFrame, i.frameBuffer.MeanDiffPercentage())
 			if err != nil {
 				log.Fatalf("err : %v", err)
 			}
 			afterMotion(motion)
 
-			s.frameBuffer.Reset()
+			i.frameBuffer.Reset()
 
 			startFrame.Close()
 			startFrame = nil

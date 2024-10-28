@@ -189,11 +189,11 @@ func main() {
 	}
 	logger.Debug(fmt.Sprintf("Video frame rate: %.2f fps\n", fps))
 
-	sensor := motion.NewSensor(stream, config.motionThreshold, config.cameraViewLength)
-	sensor.Detect(
+	input := motion.NewInput(stream, config.motionThreshold, config.cameraViewLength)
+	input.Detect(
 		func(startFrame *frame.Frame) {
 			if config.saveFrames {
-				startTime := sensor.TimeAtFrame(startFrame)
+				startTime := input.TimeAtFrame(startFrame)
 				logger.Info(fmt.Sprintf("Motion started at: %.2f seconds.\n", startTime))
 				if !gocv.IMWrite("motion-start.jpg", *startFrame.Mat()) {
 					log.Fatal("Unable to write image")
@@ -202,7 +202,7 @@ func main() {
 		},
 		func(endFrame *frame.Frame) {
 			if config.saveFrames {
-				endTime := sensor.TimeAtFrame(endFrame)
+				endTime := input.TimeAtFrame(endFrame)
 				logger.Info(fmt.Sprintf("Motion ended at: %.2f seconds.\n", endTime))
 				if !gocv.IMWrite("motion-end.jpg", *endFrame.Mat()) {
 					log.Fatal("Unable to write image")
@@ -210,7 +210,7 @@ func main() {
 			}
 		},
 		func(detectedMotion *motion.Motion) {
-			motionReport := motion.NewMotionReport(detectedMotion, sensor)
+			motionReport := motion.NewMotionReport(detectedMotion, input)
 
 			if config.printMotion {
 				var str string
