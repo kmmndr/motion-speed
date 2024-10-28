@@ -4,6 +4,7 @@ go 1.23.2
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.5.0
+	github.com/gofrs/uuid/v5 v5.3.0
 	gocv.io/x/gocv v0.38.0
 )
 
