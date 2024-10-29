@@ -38,6 +38,14 @@ func (m *Motion) MeanDiffPercentage() float64 {
 	return m.meanDiffPercentage
 }
 
+func (m *Motion) StartFrame() *frame.Frame {
+	return m.startFrame
+}
+
+func (m *Motion) EndFrame() *frame.Frame {
+	return m.endFrame
+}
+
 func (m *Motion) UUID() string {
 	return m.uuid.String()
 }

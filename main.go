@@ -15,7 +15,6 @@ import (
 	"text/template"
 	"time"
 
-	"motionspeed/internal/frame"
 	"motionspeed/internal/motion"
 	"motionspeed/internal/video"
 
@@ -190,27 +189,26 @@ func main() {
 	logger.Debug(fmt.Sprintf("Video frame rate: %.2f fps\n", fps))
 
 	input := motion.NewInput(stream, config.motionThreshold, config.cameraViewLength)
-	input.Detect(
-		func(startFrame *frame.Frame) {
-			if config.saveFrames {
-				startTime := input.TimeAtFrame(startFrame)
-				logger.Info(fmt.Sprintf("Motion started at: %.2f seconds.\n", startTime))
-				if !gocv.IMWrite("motion-start.jpg", *startFrame.Mat()) {
-					log.Fatal("Unable to write image")
-				}
-			}
-		},
-		func(endFrame *frame.Frame) {
-			if config.saveFrames {
-				endTime := input.TimeAtFrame(endFrame)
-				logger.Info(fmt.Sprintf("Motion ended at: %.2f seconds.\n", endTime))
-				if !gocv.IMWrite("motion-end.jpg", *endFrame.Mat()) {
-					log.Fatal("Unable to write image")
-				}
-			}
-		},
+	input.DetectMotion(
 		func(detectedMotion *motion.Motion) {
 			motionReport := motion.NewMotionReport(detectedMotion, input)
+
+			if config.saveFrames {
+				startFrame := detectedMotion.StartFrame()
+				endFrame := detectedMotion.EndFrame()
+
+				startTime := input.TimeAtFrame(startFrame)
+				logger.Info(fmt.Sprintf("Motion started at: %.2f seconds.\n", startTime))
+				if !gocv.IMWrite(fmt.Sprintf("%s-motion-start.jpg", detectedMotion.UUID()), *startFrame.Mat()) {
+					log.Fatal("Unable to write image")
+				}
+
+				endTime := input.TimeAtFrame(endFrame)
+				logger.Info(fmt.Sprintf("Motion ended at: %.2f seconds.\n", endTime))
+				if !gocv.IMWrite(fmt.Sprintf("%s-motion-end.jpg", detectedMotion.UUID()), *endFrame.Mat()) {
+					log.Fatal("Unable to write image")
+				}
+			}
 
 			if config.printMotion {
 				var str string
