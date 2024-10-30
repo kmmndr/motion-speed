@@ -61,7 +61,6 @@ func (i *Input) detect(onMotionStart func(*frame.Frame), onMotionEnd func(*frame
 		if err != nil {
 			log.Printf("Unable to create Frame : %v", err)
 		}
-		defer grayFrame.Close()
 
 		frameIndex++
 
@@ -100,12 +99,10 @@ func (i *Input) detect(onMotionStart func(*frame.Frame), onMotionEnd func(*frame
 			i.frameBuffer.Reset()
 
 			startFrame.Close()
-			startFrame = nil
 			endFrame.Close()
-			endFrame = nil
 		}
 
+		grayFrame.Close()
 		currentFrame.Close()
-		currentFrame = nil
 	}
 }
