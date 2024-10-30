@@ -247,5 +247,6 @@ func main() {
 
 				logger.Info(fmt.Sprintf("Command returned: %s", out.String()))
 			}
-		})
+		},
+	)
 }
