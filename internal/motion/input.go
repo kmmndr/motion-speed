@@ -49,8 +49,7 @@ func (i *Input) detect(onMotionStart func(*frame.Frame), onMotionEnd func(*frame
 	var endFrame *frame.Frame
 
 	frameIndex := 0
-	isMovementDetected := false
-	movementFrameCount := 0
+	isMotionDetected := false
 
 	for {
 		if currentFrame = i.stream.Read(frameIndex); currentFrame == nil {
@@ -74,15 +73,14 @@ func (i *Input) detect(onMotionStart func(*frame.Frame), onMotionEnd func(*frame
 		if diffPercentage > i.threshold {
 			i.frameBuffer.UpdateAverageDiffPercentage(grayFrame)
 
-			if !isMovementDetected { // Motion start
-				isMovementDetected = true
+			if !isMotionDetected { // Motion start
+				isMotionDetected = true
 				startFrame, _ = currentFrame.Clone()
 
 				onMotionStart(startFrame)
 			}
-			movementFrameCount++
-		} else if isMovementDetected { // Motion end
-			isMovementDetected = false
+		} else if isMotionDetected { // Motion end
+			isMotionDetected = false
 			endFrame, _ = currentFrame.Clone()
 
 			onMotionEnd(endFrame)
