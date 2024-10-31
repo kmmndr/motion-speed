@@ -15,8 +15,8 @@ import (
 	"text/template"
 	"time"
 
-	"motionspeed/internal/motion"
-	"motionspeed/internal/video"
+	"github.com/kmmndr/motion-speed/internal/motion"
+	"github.com/kmmndr/motion-speed/internal/video"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"gocv.io/x/gocv"

@@ -6,7 +6,7 @@ import (
 
 	uuid "github.com/gofrs/uuid/v5"
 
-	"motionspeed/internal/frame"
+	"github.com/kmmndr/motion-speed/internal/frame"
 )
 
 type Motion struct {

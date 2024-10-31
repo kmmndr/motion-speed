@@ -1,4 +1,4 @@
-module motionspeed
+module github.com/kmmndr/motion-speed
 
 go 1.23.2
 

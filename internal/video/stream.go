@@ -2,7 +2,8 @@ package video
 
 import (
 	"fmt"
-	"motionspeed/internal/frame"
+
+	"github.com/kmmndr/motion-speed/internal/frame"
 
 	"gocv.io/x/gocv"
 )

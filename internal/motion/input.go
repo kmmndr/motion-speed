@@ -3,8 +3,8 @@ package motion
 import (
 	"log"
 
-	"motionspeed/internal/frame"
-	"motionspeed/internal/video"
+	"github.com/kmmndr/motion-speed/internal/frame"
+	"github.com/kmmndr/motion-speed/internal/video"
 )
 
 type Input struct {

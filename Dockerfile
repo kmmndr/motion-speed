@@ -14,4 +14,4 @@ FROM alpine:edge
 
 RUN apk add --no-cache opencv libopencv_aruco libopencv_photo libopencv_video
 
-COPY --from=build /build/motionspeed /usr/local/bin/
+COPY --from=build /build/motion-speed /usr/local/bin/
