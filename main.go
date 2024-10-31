@@ -85,6 +85,7 @@ func init() {
 		config.mqttPort = port
 	}
 }
+
 func expandTemplate(tmpl string, report *motion.MotionReport) string {
 	t, err := template.New("").Parse(tmpl)
 	if err != nil {
@@ -141,7 +142,6 @@ func mqttClientOptions() *mqtt.ClientOptions {
 }
 
 func main() {
-
 	if config.videoPath == "" && config.videoUrl == "" {
 		fmt.Println("Error: missing video file or url option")
 		os.Exit(1)
