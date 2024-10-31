@@ -27,7 +27,7 @@ go install github.com/kmmndr/motion-speed@latest
 ### Using Docker
 
 ```
-docker build -t motion-speed .
+docker build -t motion-speed . && docker run --rm -it motion-speed -help
 ```
 
 ## Usage
